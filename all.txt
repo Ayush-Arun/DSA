@@ -1,0 +1,449 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef struct node {
+    int data;
+    struct node *link;
+} Node;
+
+Node* top = NULL;
+
+int isEmpty() { return top == NULL; }
+
+void push(int item) {
+    Node* temp = (Node*)malloc(sizeof(Node));
+    temp->data = item;
+    temp->link = top;
+    top = temp;
+}
+
+int pop() {
+    if (isEmpty()) return -1;
+    Node* temp = top;
+    int item = temp->data;
+    top = top->link;
+    free(temp);
+    return item;
+}
+
+void display() {
+    Node* temp = top;
+    while (temp != NULL) {
+        printf("%d ", temp->data);
+        temp = temp->link;
+    }
+    printf("\n");
+}
+
+int main() {
+    int choice, item;
+
+    while (1) {
+        printf("\n1. Push\n2. Pop\n3. Display\n4. Exit\n");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                scanf("%d", &item);
+                push(item);
+                break;
+
+            case 2:
+                item = pop();
+                if (item == -1) printf("Underflow\n");
+                else printf("Popped: %d\n", item);
+                break;
+
+            case 3:
+                display();
+                break;
+
+            case 4:
+                exit(0);
+        }
+    }
+}
+
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#define MAX 20
+
+typedef enum { lparen, rparen, plus, minus, times, divide, mod, eos, operand } precedence;
+
+precedence stack[30];
+int top = -1;
+char EXPR[MAX];
+
+int isp[] = {0,19,12,12,13,13,13,0};
+int icp[] = {20,19,12,12,13,13,13,0};
+
+void push(precedence token){ stack[++top] = token; }
+precedence pop(){ return stack[top--]; }
+
+precedence get_token(char *symbol, int *n){
+    *symbol = EXPR[(*n)++];
+    switch (*symbol){
+        case '(': return lparen;
+        case ')': return rparen;
+        case '+': return plus;
+        case '-': return minus;
+        case '*': return times;
+        case '/': return divide;
+        case '%': return mod;
+        case '\0': return eos;
+        default: return operand;
+    }
+}
+
+void print_token(precedence token){
+    switch (token){
+        case plus: printf("+"); break;
+        case minus: printf("-"); break;
+        case times: printf("*"); break;
+        case divide: printf("/"); break;
+        case mod: printf("%%"); break;
+    }
+}
+
+void postfix(){
+    char symbol;
+    precedence token;
+    int n = 0;
+
+    top = 0;
+    stack[0] = eos;
+
+    for (token = get_token(&symbol,&n); token != eos; token = get_token(&symbol,&n)){
+
+        if (token == operand)
+            printf("%c", symbol);
+
+        else if (token == rparen){
+            while (stack[top] != lparen)
+                print_token(pop());
+            pop();
+        }
+
+        else{
+            while (isp[stack[top]] >= icp[token])
+                print_token(pop());
+            push(token);
+        }
+    }
+
+    while ((token = pop()) != eos)
+        print_token(token);
+
+    printf("\n");
+}
+
+int main(){
+    scanf("%s", EXPR);
+    postfix();
+    return 0;
+}
+
+
+
+#include <stdio.h>
+#include <ctype.h>
+
+#define MAX 40
+
+int stack[MAX];
+int top = -1;
+
+void push(int n){ stack[++top] = n; }
+int pop(){ return stack[top--]; }
+
+int evalPostfix(char exp[]){
+    for (int i = 0; exp[i] != '\0'; i++){
+        char c = exp[i];
+
+        if (isdigit(c))
+            push(c - '0');
+        else{
+            int op2 = pop();
+            int op1 = pop();
+
+            switch(c){
+                case '+': push(op1 + op2); break;
+                case '-': push(op1 - op2); break;
+                case '*': push(op1 * op2); break;
+                case '/': push(op1 / op2); break;
+                case '%': push(op1 % op2); break;
+            }
+        }
+    }
+    return pop();
+}
+
+int main(){
+    char exp[MAX];
+    scanf("%s", exp);
+    printf("%d\n", evalPostfix(exp));
+    return 0;
+}
+
+
+
+
+#include <stdio.h>
+#define MAX_TERMS 101
+
+typedef struct {
+    int row;
+    int col;
+    int value;
+} Term;
+
+Term a[MAX_TERMS];
+
+/* ----------------- SIMPLE TRANSPOSE ----------------- */
+void simpleTranspose(Term a[], Term b[]) {
+    int numTerms = a[0].value;
+    b[0].row = a[0].col;
+    b[0].col = a[0].row;
+    b[0].value = numTerms;
+
+    int k = 1;
+
+    for (int col = 0; col < a[0].col; col++) {
+        for (int i = 1; i <= numTerms; i++) {
+            if (a[i].col == col) {
+                b[k].row = a[i].col;
+                b[k].col = a[i].row;
+                b[k].value = a[i].value;
+                k++;
+            }
+        }
+    }
+}
+
+/* ----------------- FAST TRANSPOSE ----------------- */
+void fastTranspose(Term a[], Term b[]) {
+    int numRows = a[0].row;
+    int numCols = a[0].col;
+    int numTerms = a[0].value;
+
+    int rowTerms[MAX_TERMS] = {0};
+    int startPos[MAX_TERMS];
+
+    b[0].row = numCols;
+    b[0].col = numRows;
+    b[0].value = numTerms;
+
+    if (numTerms == 0) return;
+
+    for (int i = 1; i <= numTerms; i++)
+        rowTerms[a[i].col]++;
+
+    startPos[0] = 1;
+    for (int i = 1; i < numCols; i++)
+        startPos[i] = startPos[i - 1] + rowTerms[i - 1];
+
+    for (int i = 1; i <= numTerms; i++) {
+        int col = a[i].col;
+        int pos = startPos[col]++;
+        b[pos].row = a[i].col;
+        b[pos].col = a[i].row;
+        b[pos].value = a[i].value;
+    }
+}
+
+/* ------------------------ MAIN ------------------------ */
+int main() {
+    int i;
+
+    printf("Enter number of rows and columns: ");
+    scanf("%d%d", &a[0].row, &a[0].col);
+
+    printf("Enter number of non-zero values: ");
+    scanf("%d", &a[0].value);
+
+    for (i = 1; i <= a[0].value; i++) {
+        scanf("%d%d%d", &a[i].row, &a[i].col, &a[i].value);
+    }
+
+    Term simple[MAX_TERMS], fast[MAX_TERMS];
+
+    simpleTranspose(a, simple);
+    fastTranspose(a, fast);
+
+    for (i = 1; i <= simple[0].value; i++)
+        printf("%d %d %d\n", simple[i].row, simple[i].col, simple[i].value);
+
+    for (i = 1; i <= fast[0].value; i++)
+        printf("%d %d %d\n", fast[i].row, fast[i].col, fast[i].value);
+
+    return 0;
+}
+
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#define MALLOC(p,n,type) p = (type*)malloc((n)*sizeof(type))
+
+typedef struct{
+    int *arr;
+    int front, rear;
+    int capacity;
+} CQ;
+
+int isEmpty(CQ *q){ return q->front == -1; }
+int isFull(CQ *q){ return (q->rear + 1) % q->capacity == q->front; }
+
+void resize(CQ *q){
+    int newCap = q->capacity * 2;
+    int *newArr;
+    MALLOC(newArr, newCap, int);
+
+    int i = q->front, j = 0;
+
+    while (i != q->rear){
+        i = (i + 1) % q->capacity;
+        newArr[j++] = q->arr[i];
+    }
+    newArr[j++] = q->arr[q->rear];
+
+    q->front = -1;
+    q->rear = j - 1;
+    q->capacity = newCap;
+
+    free(q->arr);
+    q->arr = newArr;
+}
+
+void insert(CQ *q, int item){
+    if (isFull(q)) resize(q);
+
+    if (isEmpty(q))
+        q->front = q->rear = 0;
+    else
+        q->rear = (q->rear + 1) % q->capacity;
+
+    q->arr[q->rear] = item;
+}
+
+int delete(CQ *q){
+    if (isEmpty(q)) return -1;
+    int item = q->arr[q->front];
+    if (q->front == q->rear)
+        q->front = q->rear = -1;
+    else
+        q->front = (q->front + 1) % q->capacity;
+    return item;
+}
+
+void display(CQ *q){
+    if (isEmpty(q)){ printf("Empty\n"); return; }
+    int i = q->front;
+    while (i != q->rear){
+        printf("%d ", q->arr[i]);
+        i = (i + 1) % q->capacity;
+    }
+    printf("%d\n", q->arr[q->rear]);
+}
+
+int main(){
+    CQ q;
+    int size, ch, item;
+
+    scanf("%d", &size);
+    MALLOC(q.arr, size, int);
+    q.capacity = size;
+    q.front = q.rear = -1;
+
+    while (1){
+        scanf("%d", &ch);
+
+        switch(ch){
+            case 1: scanf("%d",&item); insert(&q,item); break;
+            case 2: item = delete(&q); if(item!=-1) printf("%d\n",item); break;
+            case 3: display(&q); break;
+            case 4: exit(0);
+        }
+    }
+}
+
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#define MAX_TERMS 100
+
+typedef struct{
+    float coef;
+    int expon;
+} poly;
+
+poly terms[MAX_TERMS];
+int avail = 0;
+
+#define COMPARE(a,b) ((a)<(b)?-1:((a)==(b)?0:1))
+
+void attach(float c, int e){
+    terms[avail].coef = c;
+    terms[avail].expon = e;
+    avail++;
+}
+
+void padd(int sa,int fa,int sb,int fb,int *sd,int *fd){
+    *sd = avail;
+
+    while (sa <= fa && sb <= fb){
+        switch(COMPARE(terms[sa].expon, terms[sb].expon)){
+            case -1: attach(terms[sb].coef, terms[sb].expon); sb++; break;
+            case  0:
+                if (terms[sa].coef + terms[sb].coef)
+                    attach(terms[sa].coef + terms[sb].coef, terms[sa].expon);
+                sa++; sb++;
+                break;
+            case  1: attach(terms[sa].coef, terms[sa].expon); sa++; break;
+        }
+    }
+
+    while (sa <= fa) attach(terms[sa].coef, terms[sa].expon), sa++;
+    while (sb <= fb) attach(terms[sb].coef, terms[sb].expon), sb++;
+
+    *fd = avail - 1;
+}
+
+void printPoly(int s,int f){
+    for(int i=s;i<=f;i++){
+        printf("%.1fx^%d", terms[i].coef, terms[i].expon);
+        if(i<f) printf(" + ");
+    }
+    printf("\n");
+}
+
+int main(){
+    int sa = 0, fa, sb, fb, sd, fd;
+
+    attach(3,4);
+    attach(2,2);
+    attach(1,0);
+    fa = avail - 1;
+
+    sb = avail;
+    attach(5,3);
+    attach(2,2);
+    attach(4,0);
+    fb = avail - 1;
+
+    printPoly(sa,fa);
+    printPoly(sb,fb);
+
+    padd(sa,fa,sb,fb,&sd,&fd);
+
+    printPoly(sd,fd);
+
+    return 0;
+}
