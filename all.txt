@@ -447,3 +447,71 @@ int main(){
 
     return 0;
 }
+
+
+
+#include <stdio.h>
+#include <ctype.h>
+
+#define MAX 40
+
+int stack[MAX];
+int top = -1;
+
+void push(int n){ 
+    stack[++top] = n; 
+}
+
+int pop(){ 
+    return stack[top--]; 
+}
+
+enum Precedence {
+    PLUS, MINUS, MUL, DIV, MOD, OPERAND
+};
+
+enum Precedence getType(char c) {
+    switch(c){
+        case '+': return PLUS;
+        case '-': return MINUS;
+        case '*': return MUL;
+        case '/': return DIV;
+        case '%': return MOD;
+        default : return OPERAND;
+    }
+}
+
+int evalPostfix(char exp[]) {
+    for(int i = 0; exp[i] != '\0'; i++) {
+        char c = exp[i];
+
+        enum Precedence type = getType(c);
+
+        if(type == OPERAND && isdigit(c)) {
+            push(c - '0');
+        }
+        else {
+            int op2 = pop();
+            int op1 = pop();
+
+            switch(type){
+                case PLUS: push(op1 + op2); break;
+                case MINUS: push(op1 - op2); break;
+                case MUL: push(op1 * op2); break;
+                case DIV: push(op1 / op2); break;
+                case MOD: push(op1 % op2); break;
+                default: break;
+            }
+        }
+    }
+
+    return pop();
+}
+
+int main() {
+    char exp[MAX];
+    scanf("%s", exp);
+
+    printf("%d\n", evalPostfix(exp));
+    return 0;
+}
